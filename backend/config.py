@@ -1,10 +1,13 @@
+from pathlib import Path
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+BASE_DIR = Path(__file__).resolve().parent
 
 
 class Settings(BaseSettings):
-    database_url: str = "postgresql+asyncpg://user:pass@localhost:5432/abhijanfastapi"
+    database_url: str = "postgresql+asyncpg://postgres:abhijanb@localhost:5432/abhijanfastapi"
     debug: bool = False
-
     # Uploads
     upload_dir: str = "uploads"
     upload_max_bytes: int = 5 * 1024 * 1024  # 5MB global default
@@ -14,7 +17,7 @@ class Settings(BaseSettings):
         "image/webp",
     ]
     upload_allowed_extensions: list[str] = [".jpg", ".jpeg", ".png", ".webp"]
-    model_config = SettingsConfigDict(env_file=".env", env_prefix="")
+    model_config = SettingsConfigDict(env_file=BASE_DIR / ".env", env_prefix="")
 
 
 settings = Settings()
