@@ -6,7 +6,7 @@ BASE_DIR = Path(__file__).resolve().parent
 
 
 class Settings(BaseSettings):
-    database_url: str = "postgresql+asyncpg://postgres:abhijanb@localhost:5432/abhijanfastapi"
+    database_url: str = "postgresql+asyncpg://postgres:abhijanb@localhost:5432/hbc"
     debug: bool = False
     # Uploads
     upload_dir: str = "uploads"

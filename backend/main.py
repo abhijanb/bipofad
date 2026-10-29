@@ -1,9 +1,20 @@
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from database import init_db
+from database import engine
+from src.auth.router import auth_router
 
-app = FastAPI(title="Abhijan FastAPI", version="1.0.0")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+    yield
+    await engine.dispose()
+
+
+app = FastAPI(title="Abhijan FastAPI", version="1.0.0", lifespan=lifespan)
 
 origins = [
     "http://localhost:3000",
@@ -26,11 +37,9 @@ def read_root():
     return {"message": "Hello from Abhijan FastAPI"}
 
 
+app.include_router(auth_router, tags=["auth"])
+
+
 @app.get("/health")
 def health_check():
     return {"status": "ok"}
-
-
-@app.on_event("startup")
-async def on_startup() -> None:
-    await init_db()

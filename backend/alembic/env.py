@@ -11,7 +11,7 @@ from alembic import context
 
 from config import settings
 from database import Base
-from models import Todo  # noqa: F401 - required for autogenerate
+from models import User, Product, PriceHistory
 
 config = context.config
 
