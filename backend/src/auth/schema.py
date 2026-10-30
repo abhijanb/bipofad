@@ -21,3 +21,11 @@ class RegisterRequest(BaseModel):
 
 class RegisterResponse(BaseModel):
     message: str
+
+class UsernameConflictResponse(BaseModel):
+    detail: str
+    suggested_usernames: list[str]
+
+class EmailConflictResponse(BaseModel):
+    detail: str
+    suggested_email: list[str]
