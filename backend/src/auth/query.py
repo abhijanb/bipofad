@@ -12,6 +12,11 @@ async def get_user_by_username(db: AsyncSession, username: str) -> User | None:
     result = await db.execute(select(User).where(User.username == username))
     return result.scalars().first()
 
+
+async def get_user_by_id(db: AsyncSession, user_id: int) -> User | None:
+    result = await db.execute(select(User).where(User.id == user_id))
+    return result.scalars().first()
+
 async def suggested_username(username: str, db: AsyncSession) -> str:
     # Check if the username already exists in the database
     existing_user = await get_user_by_username(db, username)

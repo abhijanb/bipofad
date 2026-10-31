@@ -1,3 +1,4 @@
+from pydantic import ConfigDict
 from pydantic import Field
 from pydantic import EmailStr
 from pydantic import BaseModel
@@ -29,3 +30,19 @@ class UsernameConflictResponse(BaseModel):
 class EmailConflictResponse(BaseModel):
     detail: str
     suggested_email: list[str]
+
+class AuthUser(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
+    username: str
+    email: EmailStr
+    is_superuser: bool = Field(default=False, alias="isSuperuser")
+
+
+class LoginResponse(BaseModel):
+    message: str
+    user: AuthUser | None = None
+
+class LoginRequest(BaseModel):
+    username: str = Field(..., min_length=3, max_length=50, pattern=r"^[A-Za-z0-9_]+$")
+    password: str = Field(..., min_length=6, max_length=72)
