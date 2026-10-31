@@ -21,6 +21,10 @@ class Settings(BaseSettings):
     secret_key: str = "dev-only-secret-key-change-me-in-production"
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 60
+    refresh_token_expire_days: int = 30
+    # Login protection
+    login_max_attempts: int = 5
+    login_lockout_minutes: int = 15
     model_config = SettingsConfigDict(env_file=BASE_DIR / ".env", env_prefix="")
 
 

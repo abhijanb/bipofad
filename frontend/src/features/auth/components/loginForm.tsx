@@ -4,7 +4,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { useLoginMutation } from "../authApi";
 import { loginSchema, type LoginForm } from "../schema";
-import { saveUser } from "../session";
+import { saveRefreshToken, saveToken } from "../storage";
 import { useAppDispatch } from "@/features/app/store";
 import { setUser } from "../authSlice";
 import { TextField } from "@/features/app/components/textField";
@@ -29,7 +29,8 @@ export function LoginForm() {
         toast.error("Login failed: no user returned");
         return;
       }
-      saveUser(data.user);
+      saveToken(data.access_token);
+      saveRefreshToken(data.refresh_token);
       dispatch(setUser(data.user));
       toast.success(data.message);
       reset();

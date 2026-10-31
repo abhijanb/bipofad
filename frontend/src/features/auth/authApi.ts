@@ -2,6 +2,8 @@ import { baseApi } from "@/features/app/baseApi";
 import type {
   LoginInput,
   LoginResponse,
+  MeResponse,
+  RefreshInput,
   RegisterInput,
   RegisterResponse,
 } from "./types";
@@ -22,7 +24,30 @@ export const authApi = baseApi.injectEndpoints({
         body,
       }),
     }),
+    refresh: builder.mutation<LoginResponse, RefreshInput>({
+      query: (body) => ({
+        url: "/auth/refresh",
+        method: "POST",
+        body,
+      }),
+    }),
+    logout: builder.mutation<void, RefreshInput>({
+      query: (body) => ({
+        url: "/auth/logout",
+        method: "POST",
+        body,
+      }),
+    }),
+    me: builder.query<MeResponse, void>({
+      query: () => "/auth/me",
+    }),
   }),
 });
 
-export const { useRegisterMutation, useLoginMutation } = authApi;
+export const {
+  useRegisterMutation,
+  useLoginMutation,
+  useRefreshMutation,
+  useLogoutMutation,
+  useMeQuery,
+} = authApi;

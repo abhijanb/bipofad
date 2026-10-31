@@ -1,3 +1,5 @@
+import hashlib
+import secrets
 from datetime import datetime, timedelta, timezone
 
 import bcrypt
@@ -18,12 +20,12 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     )
 
 
-def create_access_token(subject: str) -> str:
+def create_access_token(user_id: int) -> str:
     expire = datetime.now(timezone.utc) + timedelta(
         minutes=settings.access_token_expire_minutes
     )
     return jwt.encode(
-        {"sub": subject, "exp": expire},
+        {"sub": str(user_id), "jti": secrets.token_urlsafe(16), "exp": expire},
         settings.secret_key,
         algorithm=settings.algorithm,
     )
@@ -31,3 +33,35 @@ def create_access_token(subject: str) -> str:
 
 def decode_access_token(token: str) -> dict:
     return jwt.decode(token, settings.secret_key, algorithms=[settings.algorithm])
+
+
+def create_refresh_token(user_id: int) -> str:
+    expire = datetime.now(timezone.utc) + timedelta(
+        days=settings.refresh_token_expire_days
+    )
+    return jwt.encode(
+        {
+            "sub": str(user_id),
+            "type": "refresh",
+            "jti": secrets.token_urlsafe(16),
+            "exp": expire,
+        },
+        settings.secret_key,
+        algorithm=settings.algorithm,
+    )
+
+
+def decode_refresh_token(token: str) -> int:
+    payload = jwt.decode(token, settings.secret_key, algorithms=[settings.algorithm])
+    if payload.get("type") != "refresh":
+        raise jwt.InvalidTokenError("Token is not a refresh token")
+    return int(payload["sub"])
+
+
+def hash_token(token: str) -> str:
+    return hashlib.sha256(token.encode("utf-8")).hexdigest()
+
+
+# Verified against when the username doesn't exist, so an unknown user costs
+# the same bcrypt work as a wrong password (no timing-based enumeration).
+DUMMY_PASSWORD_HASH = hash_password(secrets.token_urlsafe(16))

@@ -1,14 +1,19 @@
 import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
+import { loadToken } from "./storage";
 import type { AuthUser } from "./types";
+
+type AuthStatus = "checking" | "authenticated" | "anonymous";
 
 type AuthState = {
   user: AuthUser | null;
-  initialized: boolean;
+  status: AuthStatus;
 };
 
 const initialState: AuthState = {
+  // Only the token is persisted. The user is always re-fetched from
+  // /auth/me, so a forged localStorage entry cannot authenticate anyone.
   user: null,
-  initialized: false,
+  status: loadToken() ? "checking" : "anonymous",
 };
 
 const authSlice = createSlice({
@@ -17,19 +22,14 @@ const authSlice = createSlice({
   reducers: {
     setUser(state, action: PayloadAction<AuthUser>) {
       state.user = action.payload;
-      state.initialized = true;
+      state.status = "authenticated";
     },
     clearUser(state) {
       state.user = null;
-      state.initialized = true;
-    },
-    /** Restores the persisted session (or marks auth as resolved when there is none). */
-    hydrate(state, action: PayloadAction<AuthUser | null>) {
-      state.user = action.payload;
-      state.initialized = true;
+      state.status = "anonymous";
     },
   },
 });
 
-export const { setUser, clearUser, hydrate } = authSlice.actions;
+export const { setUser, clearUser } = authSlice.actions;
 export const authReducer = authSlice.reducer;

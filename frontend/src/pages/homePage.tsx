@@ -2,15 +2,26 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { useAppDispatch, useAppSelector } from "@/features/app/store";
 import { clearUser } from "@/features/auth/authSlice";
-import { forgetUser } from "@/features/auth/session";
+import { useLogoutMutation } from "@/features/auth/authApi";
+import { clearTokens, loadRefreshToken } from "@/features/auth/storage";
 
 export function HomePage() {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
   const user = useAppSelector((state) => state.auth.user);
+  const [logoutRequest] = useLogoutMutation();
 
-  function logout() {
-    forgetUser();
+  async function logout() {
+    const refresh_token = loadRefreshToken();
+    if (refresh_token) {
+      // Best effort: revoke server-side, but never block the local logout.
+      try {
+        await logoutRequest({ refresh_token }).unwrap();
+      } catch {
+        // ignore
+      }
+    }
+    clearTokens();
     dispatch(clearUser());
     toast.success("Logged out");
     navigate("/login", { replace: true });
