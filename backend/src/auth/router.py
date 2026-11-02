@@ -109,10 +109,10 @@ async def login(
     body: Annotated[LoginRequest, Body()],
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
-    user = await get_user_by_username(db, body.username)
+    user = await get_user_by_email(db, body.email)
     if not user:
         # Do the same bcrypt work as a real check so response time doesn't
-        # reveal whether the username exists. bcrypt is CPU-bound, so keep it
+        # reveal whether the email exists. bcrypt is CPU-bound, so keep it
         # off the event loop.
         await run_in_threadpool(verify_password, body.password, DUMMY_PASSWORD_HASH)
         return JSONResponse(

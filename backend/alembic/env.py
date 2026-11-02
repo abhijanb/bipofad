@@ -11,7 +11,7 @@ from alembic import context
 
 from config import settings
 from database import Base
-from models import User, Product, PriceHistory
+from models import User, Product, PriceHistory, VaultCollection
 
 config = context.config
 

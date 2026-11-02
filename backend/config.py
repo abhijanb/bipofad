@@ -25,6 +25,9 @@ class Settings(BaseSettings):
     # Login protection
     login_max_attempts: int = 5
     login_lockout_minutes: int = 15
+    # Demo
+    # Starting wallet balance in paisa, for demos only. 0 disables it.
+    demo_balance_paisa: int = 0
     model_config = SettingsConfigDict(env_file=BASE_DIR / ".env", env_prefix="")
 
 

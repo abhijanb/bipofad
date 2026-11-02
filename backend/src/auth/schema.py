@@ -68,5 +68,10 @@ class MeResponse(BaseModel):
     user: AuthUser
 
 class LoginRequest(BaseModel):
-    username: str = Field(..., min_length=3, max_length=50, pattern=r"^[A-Za-z0-9_]+$")
+    email: EmailStr
     password: Password = Field(..., min_length=6, max_length=72)
+
+    @field_validator("email")
+    @classmethod
+    def normalize_email(cls, v: str) -> str:
+        return v.lower()

@@ -6,8 +6,10 @@ import { useLoginMutation } from "../authApi";
 import { loginSchema, type LoginForm } from "../schema";
 import { saveRefreshToken, saveToken } from "../storage";
 import { useAppDispatch } from "@/features/app/store";
+import { baseApi } from "@/features/app/baseApi";
 import { setUser } from "../authSlice";
 import { TextField } from "@/features/app/components/textField";
+import { getApiErrorMessage } from "@/features/app/apiError";
 
 export function LoginForm() {
   const navigate = useNavigate();
@@ -31,13 +33,14 @@ export function LoginForm() {
       }
       saveToken(data.access_token);
       saveRefreshToken(data.refresh_token);
+      // Clear anything cached from a previous account before switching over.
+      dispatch(baseApi.util.resetApiState());
       dispatch(setUser(data.user));
       toast.success(data.message);
       reset();
       navigate("/", { replace: true });
     } catch (error) {
-      const detail = (error as { data?: { detail?: string } }).data?.detail;
-      toast.error(detail ?? "Login failed");
+      toast.error(getApiErrorMessage(error, "Login failed"));
     }
   }
 
@@ -52,10 +55,11 @@ export function LoginForm() {
       </div>
 
       <TextField
-        label="Username"
-        placeholder="Enter your username"
-        registration={register("username")}
-        error={errors.username}
+        type="email"
+        label="Email"
+        placeholder="you@example.com"
+        registration={register("email")}
+        error={errors.email}
       />
 
       <TextField

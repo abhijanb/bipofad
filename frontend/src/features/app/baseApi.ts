@@ -78,6 +78,8 @@ function refreshSession(
 
 function endSession(api: BaseQueryApi) {
   clearTokens();
+  // Never let one account's cached data survive into the next session.
+  api.dispatch(baseApi.util.resetApiState());
   api.dispatch(clearUser());
 }
 
@@ -109,5 +111,6 @@ const baseQueryWithAuth: BaseQueryFn<
 export const baseApi = createApi({
   reducerPath: "api",
   baseQuery: baseQueryWithAuth,
+  tagTypes: ["Vault"],
   endpoints: () => ({}),
 });

@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from database import engine
 from src.auth.router import auth_router
+from src.vault.router import vault_router
 
 
 @asynccontextmanager
@@ -38,6 +39,7 @@ def read_root():
 
 
 app.include_router(auth_router, tags=["auth"])
+app.include_router(vault_router, tags=["vault"])
 
 
 @app.get("/health")

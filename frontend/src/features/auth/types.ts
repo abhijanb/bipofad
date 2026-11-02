@@ -15,7 +15,7 @@ export type RegisterResponse = {
 };
 
 export type LoginInput = {
-  username: string;
+  email: string;
   password: string;
 };
 

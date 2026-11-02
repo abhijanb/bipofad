@@ -5,6 +5,7 @@ import { RegisterForm } from "./features/auth/components/registerForm";
 import { Guard } from "./features/auth/guards";
 import { AuthPage } from "./pages/authPage";
 import { HomePage } from "./pages/homePage";
+import { VaultPage } from "./pages/vaultPage";
 
 export function App() {
   return (
@@ -15,6 +16,14 @@ export function App() {
           element={
             <Guard>
               <HomePage />
+            </Guard>
+          }
+        />
+        <Route
+          path="/vault"
+          element={
+            <Guard>
+              <VaultPage />
             </Guard>
           }
         />

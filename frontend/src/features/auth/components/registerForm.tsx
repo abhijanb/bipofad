@@ -6,9 +6,9 @@ import { toast } from "sonner";
 import { useRegisterMutation } from "../authApi";
 import { registerSchema, type RegisterForm } from "../schema";
 import { TextField } from "@/features/app/components/textField";
+import { getApiErrorMessage } from "@/features/app/apiError";
 
 type ConflictData = {
-  detail?: string;
   suggested_usernames?: string[];
   suggested_email?: string[];
 };
@@ -51,7 +51,7 @@ export function RegisterForm() {
         })),
       ]);
 
-      toast.error(data?.detail ?? "Registration failed");
+      toast.error(getApiErrorMessage(error, "Registration failed"));
     }
   }
 

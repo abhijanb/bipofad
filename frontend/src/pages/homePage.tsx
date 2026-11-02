@@ -1,49 +1,20 @@
-import { useNavigate } from "react-router-dom";
-import { toast } from "sonner";
-import { useAppDispatch, useAppSelector } from "@/features/app/store";
-import { clearUser } from "@/features/auth/authSlice";
-import { useLogoutMutation } from "@/features/auth/authApi";
-import { clearTokens, loadRefreshToken } from "@/features/auth/storage";
+import { Link } from "react-router-dom";
+import { useAppSelector } from "@/features/app/store";
+import { AppHeader } from "@/features/app/components/appHeader";
 
 export function HomePage() {
-  const navigate = useNavigate();
-  const dispatch = useAppDispatch();
   const user = useAppSelector((state) => state.auth.user);
-  const [logoutRequest] = useLogoutMutation();
-
-  async function logout() {
-    const refresh_token = loadRefreshToken();
-    if (refresh_token) {
-      // Best effort: revoke server-side, but never block the local logout.
-      try {
-        await logoutRequest({ refresh_token }).unwrap();
-      } catch {
-        // ignore
-      }
-    }
-    clearTokens();
-    dispatch(clearUser());
-    toast.success("Logged out");
-    navigate("/login", { replace: true });
-  }
 
   return (
     <div className="min-h-screen">
-      <header className="border-b border-gray-200 bg-white">
-        <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-4">
-          <span className="text-lg font-semibold text-gray-900">HBC</span>
-          <div className="flex items-center gap-4">
-            <span className="text-sm text-gray-600">{user?.username}</span>
-            <button
-              type="button"
-              onClick={logout}
-              className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50"
-            >
-              Log out
-            </button>
-          </div>
-        </div>
-      </header>
+      <AppHeader>
+        <Link
+          to="/vault"
+          className="text-sm font-medium text-gray-700 transition hover:text-gray-900"
+        >
+          Silver vault
+        </Link>
+      </AppHeader>
 
       <main className="mx-auto max-w-5xl px-6 py-12">
         <h1 className="text-3xl font-semibold text-gray-900">
