@@ -5,7 +5,7 @@ from sqlalchemy import String
 from sqlalchemy.orm import mapped_column
 from sqlalchemy.orm import Mapped
 from database import Base
-from sqlalchemy import BigInteger, CheckConstraint, DateTime, ForeignKey, Integer, Numeric, String, UniqueConstraint, func
+from sqlalchemy import BigInteger, CheckConstraint, DateTime, ForeignKey, Index, Integer, Numeric, String, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from database import Base
 class User(Base):
@@ -24,6 +24,9 @@ class User(Base):
      silver_grams: Mapped[Decimal] = mapped_column(
          Numeric(14, 3), default=Decimal("0"), server_default="0", nullable=False
      )
+     gold_grams: Mapped[Decimal] = mapped_column(
+         Numeric(14, 3), default=Decimal("0"), server_default="0", nullable=False
+     )
      failed_login_attempts: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
      locked_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
      created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
@@ -37,6 +40,10 @@ class User(Base):
          CheckConstraint(
              "silver_grams >= 0",
              name="ck_users_silver_grams_non_negative",
+         ),
+         CheckConstraint(
+             "gold_grams >= 0",
+             name="ck_users_gold_grams_non_negative",
          ),
      )
 
@@ -65,6 +72,10 @@ class Product(Base):
     code: Mapped[str] = mapped_column(String(20), unique=True, nullable=False)  # "SILVER", "GOLD"
     name: Mapped[str] = mapped_column(String(100), nullable=False)
     unit: Mapped[str] = mapped_column(String(20), default="gram", nullable=False)
+    # Smallest holding a user may cash out for this metal, in grams.
+    min_cashout_grams: Mapped[Decimal] = mapped_column(
+        Numeric(14, 3), default=Decimal("0"), server_default="0", nullable=False
+    )
     description: Mapped[str | None] = mapped_column(String(255))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
@@ -72,6 +83,13 @@ class Product(Base):
     )
 
     prices: Mapped[list["PriceHistory"]] = relationship(back_populates="product")
+
+    __table_args__ = (
+        CheckConstraint(
+            "min_cashout_grams >= 0",
+            name="ck_products_min_cashout_non_negative",
+        ),
+    )
 
 
 class PriceHistory(Base):
@@ -115,5 +133,99 @@ class VaultCollection(Base):
         CheckConstraint(
             "price_per_gram_paisa > 0",
             name="ck_vault_collections_price_positive",
+        ),
+    )
+
+
+class VaultSale(Base):
+    """A user selling metal back to the vault.
+
+    The wallet credit and the matching `wallet_transactions` row are written in
+    the same transaction as this record.
+    """
+
+    __tablename__ = "vault_sales"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    product_id: Mapped[int] = mapped_column(ForeignKey("products.id"), nullable=False)
+    grams: Mapped[Decimal] = mapped_column(Numeric(14, 3), nullable=False)
+    amount_paisa: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    price_per_gram_paisa: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+    user: Mapped["User"] = relationship()
+    product: Mapped["Product"] = relationship()
+
+    __table_args__ = (
+        CheckConstraint("grams > 0", name="ck_vault_sales_grams_positive"),
+        CheckConstraint("amount_paisa > 0", name="ck_vault_sales_amount_positive"),
+        CheckConstraint(
+            "price_per_gram_paisa > 0",
+            name="ck_vault_sales_price_positive",
+        ),
+    )
+
+
+class WalletTransaction(Base):
+    """Append-only wallet ledger.
+
+    `users.balance_paisa` is a cached total; this table explains how it got
+    there. Amounts are signed: credits are positive, debits are negative.
+    """
+
+    __tablename__ = "wallet_transactions"
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="RESTRICT"), nullable=False
+    )
+    type: Mapped[str] = mapped_column(String(32), nullable=False)
+    amount_paisa: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    balance_after_paisa: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    # Optional pointer to the row that caused this movement.
+    reference_type: Mapped[str | None] = mapped_column(String(32))
+    reference_id: Mapped[int | None] = mapped_column(BigInteger)
+    description: Mapped[str | None] = mapped_column(String(255))
+    # Unique per user so a retried top-up cannot credit twice.
+    idempotency_key: Mapped[str | None] = mapped_column(String(128))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+    user: Mapped["User"] = relationship()
+
+    __table_args__ = (
+        CheckConstraint(
+            "amount_paisa <> 0",
+            name="ck_wallet_transactions_amount_non_zero",
+        ),
+        CheckConstraint(
+            "balance_after_paisa >= 0",
+            name="ck_wallet_transactions_balance_after_non_negative",
+        ),
+        CheckConstraint(
+            "type IN ("
+            "'demo_credit', 'admin_credit', 'deposit', "
+            "'silver_purchase', 'silver_sale', "
+            "'gold_purchase', 'gold_sale', 'refund', "
+            "'opening_balance', 'reversal'"
+            ")",
+            name="ck_wallet_transactions_type",
+        ),
+        UniqueConstraint(
+            "user_id",
+            "idempotency_key",
+            name="uix_wallet_transactions_user_idempotency",
+        ),
+        Index("ix_wallet_transactions_user_created", "user_id", "created_at"),
+        Index(
+            "ix_wallet_transactions_reference",
+            "reference_type",
+            "reference_id",
         ),
     )

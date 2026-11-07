@@ -11,7 +11,14 @@ from alembic import context
 
 from config import settings
 from database import Base
-from models import User, Product, PriceHistory, VaultCollection
+from models import (
+    Product,
+    PriceHistory,
+    User,
+    VaultCollection,
+    VaultSale,
+    WalletTransaction,
+)
 
 config = context.config
 

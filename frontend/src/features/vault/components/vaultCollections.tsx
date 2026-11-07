@@ -1,13 +1,18 @@
 import { formatDate, formatGrams, formatRupees } from "../format";
-import type { VaultCollection } from "../types";
+import type { VaultCollection, VaultProduct } from "../types";
+import { productLowerLabel } from "@/features/product/product";
 
 export function VaultCollections({
+  product,
   collections,
   isLoading,
 }: {
+  product: VaultProduct;
   collections?: VaultCollection[];
   isLoading: boolean;
 }) {
+  const lowerLabel = productLowerLabel(product);
+
   return (
     <section className="mt-8">
       <h2 className="text-lg font-semibold text-gray-900">Collections</h2>
@@ -37,7 +42,7 @@ export function VaultCollections({
         </ul>
       ) : (
         <p className="mt-3 rounded-xl border border-dashed border-gray-300 p-6 text-center text-sm text-gray-500">
-          No silver collected yet. Start with as little as Rs 10.
+          No {lowerLabel} collected yet. Start with as little as Rs 10.
         </p>
       )}
     </section>

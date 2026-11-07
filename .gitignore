@@ -12,6 +12,8 @@ __pycache__/
 .pytest_cache/
 .ruff_cache/
 .mypy_cache/
+backend/tests/
+backend/requirements-dev.txt
 
 # Node
 node_modules/

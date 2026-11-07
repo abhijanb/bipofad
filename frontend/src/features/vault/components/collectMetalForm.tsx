@@ -1,27 +1,61 @@
+import { useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
-import { useCollectSilverMutation } from "../vaultApi";
+import { useCollectMetalMutation } from "../vaultApi";
 import {
   collectSilverRupeesSchema,
   type CollectSilverRupeesForm,
 } from "../schema";
-import { formatGrams, formatRupees } from "../format";
+import { formatDateTime, formatGrams, formatRupees } from "../format";
+import type { VaultProduct } from "../types";
 import { getApiErrorMessage } from "@/features/app/apiError";
+import {
+  productLowerLabel,
+  productLabel,
+} from "@/features/product/product";
 
 const PRESETS = [10, 50, 100, 500];
 
-export function CollectSilverForm({
+export function CollectMetalForm({
+  product,
   pricePerGramPaisa,
+  priceUpdatedAt,
   balancePaisa,
   isLoadingPrice,
 }: {
+  product: VaultProduct;
   pricePerGramPaisa: number | null;
+  priceUpdatedAt: string | null;
   balancePaisa: number | null;
   isLoadingPrice: boolean;
 }) {
-  const [collectSilver, { isLoading: isCollecting }] =
-    useCollectSilverMutation();
+  const [collectMetal, { isLoading: isCollecting }] =
+    useCollectMetalMutation();
+  const pendingKey = useRef<{
+    key: string;
+    amountPaisa: number;
+    product: VaultProduct;
+  } | null>(null);
+  const label = productLabel(product);
+  const lowerLabel = productLowerLabel(product);
+
+  function getIdempotencyKey(amountPaisa: number): string {
+    // Reuse the key only for the same metal and amount. A retry of the same
+    // purchase cannot double-buy, while changing either starts a new request.
+    if (
+      !pendingKey.current ||
+      pendingKey.current.amountPaisa !== amountPaisa ||
+      pendingKey.current.product !== product
+    ) {
+      pendingKey.current = {
+        key: crypto.randomUUID(),
+        amountPaisa,
+        product,
+      };
+    }
+    return pendingKey.current.key;
+  }
 
   const {
     register,
@@ -55,19 +89,24 @@ export function CollectSilverForm({
     }
 
     try {
-      const result = await collectSilver({
+      const result = await collectMetal({
+        product,
         amount_paisa: requestedPaisa,
+        idempotency_key: getIdempotencyKey(requestedPaisa),
       }).unwrap();
+      pendingKey.current = null;
       toast.success(result.message);
       reset();
     } catch (err) {
-      toast.error(getApiErrorMessage(err, "Could not collect silver"));
+      toast.error(getApiErrorMessage(err, `Could not collect ${lowerLabel}`));
     }
   }
 
   return (
     <section className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-      <h2 className="text-lg font-semibold text-gray-900">Collect silver</h2>
+      <h2 className="text-lg font-semibold text-gray-900">
+        Collect {lowerLabel}
+      </h2>
       <p className="mt-1 text-sm text-gray-500">
         Enter an amount between Rs 10 and Rs 1,00,000.
       </p>
@@ -121,10 +160,10 @@ export function CollectSilverForm({
         </div>
 
         {isLoadingPrice ? (
-          <p className="text-sm text-gray-500">Loading silver price...</p>
+          <p className="text-sm text-gray-500">Loading {lowerLabel} price...</p>
         ) : !hasPrice ? (
           <p className="text-sm text-gray-500">
-            The current silver price is unavailable.
+            The current {lowerLabel} price is unavailable.
           </p>
         ) : estimatedGrams !== null ? (
           <p className="text-sm text-gray-500">
@@ -132,11 +171,17 @@ export function CollectSilverForm({
             <span className="font-medium text-gray-900">
               {formatGrams(estimatedGrams)}
             </span>{" "}
-            of silver.
+            of {lowerLabel}.
           </p>
         ) : (
           <p className="text-sm text-gray-500">
-            Enter an amount to estimate the silver you will get.
+            Enter an amount to estimate the {lowerLabel} you will get.
+          </p>
+        )}
+
+        {hasPrice && priceUpdatedAt && (
+          <p className="text-xs text-gray-400">
+            Rate as of {formatDateTime(priceUpdatedAt)}
           </p>
         )}
 
@@ -147,7 +192,7 @@ export function CollectSilverForm({
           }
           className="w-full rounded-lg bg-gray-900 px-3 py-2.5 text-sm font-medium text-white transition hover:bg-black disabled:opacity-50"
         >
-          {isCollecting ? "Collecting..." : "Collect silver"}
+          {isCollecting ? `Collecting ${lowerLabel}...` : `Collect ${lowerLabel}`}
         </button>
       </form>
     </section>

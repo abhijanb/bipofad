@@ -13,6 +13,7 @@
     "@hookform/resolvers": "^6.0.2",
     "@reduxjs/toolkit": "^2.13.0",
     "bun-plugin-tailwind": "^0.1.2",
+    "date-fns": "^4.4.0",
     "react": "^19",
     "react-dom": "^19",
     "react-hook-form": "^7.91.0",

@@ -4,9 +4,11 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from config import settings
 from database import engine
 from src.auth.router import auth_router
 from src.vault.router import vault_router
+from src.wallet.router import wallet_router
 
 
 @asynccontextmanager
@@ -17,16 +19,9 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
 app = FastAPI(title="Abhijan FastAPI", version="1.0.0", lifespan=lifespan)
 
-origins = [
-    "http://localhost:3000",
-    "http://localhost:5173",
-    "http://127.0.0.1:3000",
-    "http://127.0.0.1:5173",
-]
-
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=settings.cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -40,6 +35,7 @@ def read_root():
 
 app.include_router(auth_router, tags=["auth"])
 app.include_router(vault_router, tags=["vault"])
+app.include_router(wallet_router, tags=["wallet"])
 
 
 @app.get("/health")

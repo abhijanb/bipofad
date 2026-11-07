@@ -21,7 +21,13 @@ export function Guard({
   }, [status, allowed, navigate]);
 
   // A stored token is being checked with /auth/me; don't render or redirect yet.
-  if (status === "checking") return null;
+  if (status === "checking") {
+    return (
+      <div className="flex min-h-screen items-center justify-center px-6">
+        <p className="text-sm text-gray-500">Checking your session...</p>
+      </div>
+    );
+  }
 
   return allowed ? <>{children}</> : null;
 }
