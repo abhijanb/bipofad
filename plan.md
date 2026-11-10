@@ -62,12 +62,13 @@ learning steps. Each step should be demoable before moving to the next one.
 - **Done when:** ✅ buy → sell back → wallet and ledger explain every paisa.
 - **Later:** add a fee/spread and a real bank/cash payout step.
 
-### Step 8 — Savings goals
+### Step 8 — Savings goals ✅
 
-- **Build:** goal amount or grams, progress bar, edit/delete, “keep buying
-  until…” experience.
-- **Learn:** derived state, UX feedback, CRUD.
-- **Done when:** set a 10 g goal, buy, and see progress update automatically.
+- **Built:** one whole-gram goal per user and metal, progress derived from the
+  cached balance, progress bar, edit/delete, and automatic refresh after a
+  purchase.
+- **Learned:** derived state, UX feedback, CRUD.
+- **Done when:** ✅ set a 10 g goal, buy, and see progress update automatically.
 
 ### Step 9 — Recurring savings
 
@@ -133,10 +134,10 @@ That is the same structure already used for `auth` and `vault`.
 - Test the failure cases: insufficient balance, stale price, double-click,
   retry.
 - The ledger is the truth; balances are a cache.
-- Keep money in integer paisa, grams in `Decimal`.
+- Keep money in integer paisa and metal in whole integer grams.
 - Every admin action must be auditable.
 
 ## Next step
 
-**Step 8 — savings goals.** Set a goal in rupees or grams, buy toward it, and
-show progress automatically.
+**Step 9 — recurring savings.** Add a "buy every Friday" schedule with
+pause/resume and an idempotent background job.

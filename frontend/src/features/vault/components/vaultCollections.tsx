@@ -1,6 +1,7 @@
+import { Coins } from "lucide-react";
 import { formatDate, formatGrams, formatRupees } from "../format";
 import type { VaultCollection, VaultProduct } from "../types";
-import { productLowerLabel } from "@/features/product/product";
+import { useVaultCollections } from "../hooks/useVaultCollections";
 
 export function VaultCollections({
   product,
@@ -11,37 +12,51 @@ export function VaultCollections({
   collections?: VaultCollection[];
   isLoading: boolean;
 }) {
-  const lowerLabel = productLowerLabel(product);
+  const {
+    collections: items,
+    isLoading: loading,
+    lowerLabel,
+  } = useVaultCollections({ product, collections, isLoading });
 
   return (
-    <section className="mt-8">
-      <h2 className="text-lg font-semibold text-gray-900">Collections</h2>
+    <section className="card mt-6 p-6 sm:p-7">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <p className="eyebrow">History</p>
+          <h2 className="section-heading mt-2">Collections</h2>
+        </div>
+        {items && items.length > 0 && (
+          <span className="chip">{items.length} entries</span>
+        )}
+      </div>
 
-      {isLoading ? (
-        <p className="mt-3 text-sm text-gray-500">Loading collections...</p>
-      ) : collections && collections.length > 0 ? (
-        <ul className="mt-3 divide-y divide-gray-200 rounded-xl border border-gray-200 bg-white">
-          {collections.map((collection) => (
-            <li
-              key={collection.id}
-              className="flex items-center justify-between px-4 py-3"
-            >
-              <div>
-                <p className="text-sm font-medium text-gray-900">
-                  {formatGrams(collection.grams)}
-                </p>
-                <p className="text-xs text-gray-500">
-                  {formatDate(collection.collected_at)}
-                </p>
+      {loading ? (
+        <p className="mt-4 text-sm text-silver-500">Loading collections...</p>
+      ) : items && items.length > 0 ? (
+        <ul className="mt-4 divide-y divide-ink-900/5">
+          {items.map((collection) => (
+            <li key={collection.id} className="list-row rounded-xl">
+              <div className="flex items-center gap-3">
+                <span className="grid h-9 w-9 place-items-center rounded-full bg-gold-100 text-gold-600">
+                  <Coins className="h-4 w-4" aria-hidden="true" />
+                </span>
+                <div>
+                  <p className="text-sm font-semibold text-ink-950">
+                    {formatGrams(collection.grams)}
+                  </p>
+                  <p className="text-xs text-silver-500">
+                    {formatDate(collection.collected_at)}
+                  </p>
+                </div>
               </div>
-              <p className="text-sm text-gray-700">
+              <p className="text-sm font-medium text-ink-700">
                 {formatRupees(collection.amount_paisa)}
               </p>
             </li>
           ))}
         </ul>
       ) : (
-        <p className="mt-3 rounded-xl border border-dashed border-gray-300 p-6 text-center text-sm text-gray-500">
+        <p className="empty-state mt-4">
           No {lowerLabel} collected yet. Start with as little as Rs 10.
         </p>
       )}

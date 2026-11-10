@@ -22,7 +22,8 @@ export const vaultApi = baseApi.injectEndpoints({
         method: "POST",
         body,
       }),
-      invalidatesTags: ["Vault", "Wallet"],
+      // A purchase moves savings-goal progress too.
+      invalidatesTags: ["Vault", "Wallet", "Goal"],
     }),
     sellMetal: builder.mutation<SellMetalResponse, SellMetalInput>({
       query: (body) => ({
@@ -30,11 +31,20 @@ export const vaultApi = baseApi.injectEndpoints({
         method: "POST",
         body,
       }),
-      invalidatesTags: ["Vault", "Wallet"],
+      invalidatesTags: ["Vault", "Wallet", "Goal"],
     }),
     priceHistory: builder.query<PricePoint[], VaultProduct>({
       query: (product) => `/vault/prices?product=${product}`,
       providesTags: ["MetalPrice"],
+    }),
+    latestPrice: builder.query<PricePoint | null, VaultProduct>({
+      query: (product) => `/vault/prices?product=${product}&limit=1`,
+      transformResponse: (points: PricePoint[]) => points.at(-1) ?? null,
+      providesTags: (_result, _error, product) => [
+        { type: "MetalPrice", id: product },
+      ],
+      // Hover prices are cheap and rarely change, so keep them for the session.
+      keepUnusedDataFor: 3600,
     }),
     setPrice: builder.mutation<PricePoint, SetPriceInput>({
       query: (body) => ({
@@ -53,5 +63,6 @@ export const {
   useCollectMetalMutation,
   useSellMetalMutation,
   usePriceHistoryQuery,
+  useLatestPriceQuery,
   useSetPriceMutation,
 } = vaultApi;

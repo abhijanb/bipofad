@@ -1,11 +1,5 @@
-import { Link } from "react-router-dom";
-import { AppHeader } from "@/features/app/components/appHeader";
-import { useAppSelector } from "@/features/app/store";
-import { selectProduct } from "@/features/product/productSlice";
-import {
-  productLowerLabel,
-  productLabel,
-} from "@/features/product/product";
+import { Navbar } from "@/components/navbar";
+import { GoalCard } from "@/features/goals/components/goalCard";
 import { CollectMetalForm } from "@/features/vault/components/collectMetalForm";
 import { MetalPriceAdminCard } from "@/features/vault/components/metalPriceAdminCard";
 import { PriceHistoryChart } from "@/features/vault/components/priceHistoryChart";
@@ -13,62 +7,64 @@ import { SellMetalForm } from "@/features/vault/components/sellMetalForm";
 import { VaultBalanceCard } from "@/features/vault/components/vaultBalanceCard";
 import { VaultCollections } from "@/features/vault/components/vaultCollections";
 import { VaultSales } from "@/features/vault/components/vaultSales";
-import {
-  usePriceHistoryQuery,
-  useVaultSummaryQuery,
-} from "@/features/vault/vaultApi";
+import { useVaultPage } from "@/features/vault/hooks/useVaultPage";
+import { formatGrams, formatRupees } from "@/features/vault/format";
 import { WalletActivity } from "@/features/wallet/components/walletActivity";
 import { WalletCreditAdminCard } from "@/features/wallet/components/walletCreditAdminCard";
-import { useWalletTransactionsQuery } from "@/features/wallet/walletApi";
-import { getApiErrorMessage } from "@/features/app/apiError";
 
 export function VaultPage() {
-  const user = useAppSelector((state) => state.auth.user);
-  const product = useAppSelector(selectProduct);
-  const label = productLabel(product);
-  const lowerLabel = productLowerLabel(product);
-  const { data, isLoading, isError, error, refetch } =
-    useVaultSummaryQuery(product);
   const {
-    data: prices,
-    isLoading: isLoadingPrices,
-    isError: isPricesError,
-  } = usePriceHistoryQuery(product);
-  const {
-    data: walletTransactions,
-    isLoading: isLoadingWallet,
-    isError: isWalletError,
-    refetch: refetchWallet,
-  } = useWalletTransactionsQuery({ limit: 20 });
-  const errorDetail = isError
-    ? getApiErrorMessage(error, "Could not load your vault.")
-    : undefined;
+    user,
+    product,
+    label,
+    lowerLabel,
+    summary,
+    isLoading,
+    isError,
+    errorDetail,
+    refetch,
+    prices,
+    isLoadingPrices,
+    isPricesError,
+    walletTransactions,
+    isLoadingWallet,
+    isWalletError,
+    refetchWallet,
+  } = useVaultPage();
+
+  const price = summary?.price_per_gram_paisa ?? null;
 
   return (
-    <div className="min-h-screen">
-      <AppHeader>
-        <Link
-          to="/"
-          className="text-sm font-medium text-gray-600 transition hover:text-gray-900"
-        >
-          Home
-        </Link>
-      </AppHeader>
+    <div className="app-shell">
+      <Navbar />
 
-      <main className="mx-auto max-w-5xl px-6 py-12">
-        <div className="flex flex-col gap-1">
-          <h1 className="text-3xl font-semibold text-gray-900">
-            {label} Vault
-          </h1>
-          <p className="text-gray-600">
-            Collect a little {lowerLabel} at a time, starting from Rs 10.
-          </p>
+      <main className="page-container">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <p className="eyebrow">Your vault</p>
+            <h1 className="mt-2 font-display text-4xl font-semibold tracking-tight text-ink-950 sm:text-5xl">
+              {label} vault
+            </h1>
+            <p className="mt-2 max-w-xl text-sm text-silver-500 sm:text-base">
+              Collect a little {lowerLabel} at a time, starting from Rs 10.
+            </p>
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            <span className="chip">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+              {price !== null ? `${formatRupees(price)} / g` : "Price unavailable"}
+            </span>
+            <span className="chip">
+              {summary ? formatGrams(summary.balance_grams) : "—"} held
+            </span>
+          </div>
         </div>
 
-        <div className="mt-8 grid gap-6 md:grid-cols-2">
+        <div className="mt-8 grid gap-6 lg:grid-cols-[1.05fr_0.95fr]">
           <VaultBalanceCard
             product={product}
-            summary={data}
+            summary={summary}
             isLoading={isLoading}
             isError={isError}
             errorDetail={errorDetail}
@@ -76,9 +72,9 @@ export function VaultPage() {
           />
           <CollectMetalForm
             product={product}
-            pricePerGramPaisa={data?.price_per_gram_paisa ?? null}
-            priceUpdatedAt={data?.price_updated_at ?? null}
-            balancePaisa={data?.balance_paisa ?? null}
+            pricePerGramPaisa={summary?.price_per_gram_paisa ?? null}
+            priceUpdatedAt={summary?.price_updated_at ?? null}
+            balancePaisa={summary?.balance_paisa ?? null}
             isLoadingPrice={isLoading}
           />
         </div>
@@ -86,22 +82,24 @@ export function VaultPage() {
         <div className="mt-6">
           <SellMetalForm
             product={product}
-            pricePerGramPaisa={data?.price_per_gram_paisa ?? null}
-            priceUpdatedAt={data?.price_updated_at ?? null}
-            balanceGrams={data?.balance_grams ?? null}
-            minCashoutGrams={data?.min_cashout_grams ?? null}
+            pricePerGramPaisa={summary?.price_per_gram_paisa ?? null}
+            priceUpdatedAt={summary?.price_updated_at ?? null}
+            balanceGrams={summary?.balance_grams ?? null}
+            minCashoutGrams={summary?.min_cashout_grams ?? null}
             isLoadingVault={isLoading}
           />
         </div>
 
+        <GoalCard product={product} />
+
         {user?.isSuperuser && (
-          <>
+          <div className="mt-6 grid gap-6 lg:grid-cols-2">
             <MetalPriceAdminCard
               product={product}
-              currentPricePerGramPaisa={data?.price_per_gram_paisa ?? null}
+              currentPricePerGramPaisa={summary?.price_per_gram_paisa ?? null}
             />
             <WalletCreditAdminCard />
-          </>
+          </div>
         )}
 
         <PriceHistoryChart
@@ -113,13 +111,13 @@ export function VaultPage() {
 
         <VaultCollections
           product={product}
-          collections={data?.collections}
+          collections={summary?.collections}
           isLoading={isLoading}
         />
 
         <VaultSales
           product={product}
-          sales={data?.sales}
+          sales={summary?.sales}
           isLoading={isLoading}
         />
 

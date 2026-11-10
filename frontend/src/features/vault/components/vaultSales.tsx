@@ -1,6 +1,7 @@
+import { Banknote } from "lucide-react";
 import { formatDateTime, formatGrams, formatRupees } from "../format";
-import { productLowerLabel } from "@/features/product/product";
 import type { VaultProduct, VaultSale } from "../types";
+import { useVaultSales } from "../hooks/useVaultSales";
 
 export function VaultSales({
   product,
@@ -11,46 +12,55 @@ export function VaultSales({
   sales?: VaultSale[];
   isLoading: boolean;
 }) {
-  const lowerLabel = productLowerLabel(product);
+  const {
+    sales: items,
+    isLoading: loading,
+    lowerLabel,
+  } = useVaultSales({ product, sales, isLoading });
 
   return (
-    <section className="mt-8">
-      <h2 className="text-lg font-semibold text-gray-900">Cash-outs</h2>
-      <p className="mt-1 text-sm text-gray-500">
-        {product === "GOLD" ? "Gold" : "Silver"} you sold back to your wallet.
-      </p>
+    <section className="card mt-6 p-6 sm:p-7">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <p className="eyebrow">History</p>
+          <h2 className="section-heading mt-2">Cash-outs</h2>
+        </div>
+        {items && items.length > 0 && (
+          <span className="chip">{items.length} entries</span>
+        )}
+      </div>
 
-      {isLoading ? (
-        <p className="mt-3 text-sm text-gray-500">Loading cash-outs...</p>
-      ) : sales && sales.length > 0 ? (
-        <ul className="mt-3 divide-y divide-gray-200 rounded-xl border border-gray-200 bg-white">
-          {sales.map((sale) => (
-            <li
-              key={sale.id}
-              className="flex items-start justify-between gap-4 px-4 py-3"
-            >
-              <div className="min-w-0">
-                <p className="text-sm font-medium text-gray-900">
-                  {formatGrams(sale.grams)} of {lowerLabel}
-                </p>
-                <p className="truncate text-xs text-gray-600">
-                  {formatRupees(sale.amount_paisa)} at{" "}
-                  {formatRupees(sale.price_per_gram_paisa)} / g
-                </p>
-                <p className="mt-0.5 text-xs text-gray-400">
-                  {formatDateTime(sale.sold_at)}
-                </p>
+      {loading ? (
+        <p className="mt-4 text-sm text-silver-500">Loading cash-outs...</p>
+      ) : items && items.length > 0 ? (
+        <ul className="mt-4 divide-y divide-ink-900/5">
+          {items.map((sale) => (
+            <li key={sale.id} className="list-row rounded-xl">
+              <div className="flex items-center gap-3">
+                <span className="grid h-9 w-9 place-items-center rounded-full bg-emerald-50 text-emerald-600">
+                  <Banknote className="h-4 w-4" aria-hidden="true" />
+                </span>
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-ink-950">
+                    {formatGrams(sale.grams)} of {lowerLabel}
+                  </p>
+                  <p className="truncate text-xs text-silver-500">
+                    {formatRupees(sale.amount_paisa)} at{" "}
+                    {formatRupees(sale.price_per_gram_paisa)} / g
+                  </p>
+                  <p className="mt-0.5 text-xs text-silver-400">
+                    {formatDateTime(sale.sold_at)}
+                  </p>
+                </div>
               </div>
-              <p className="shrink-0 text-sm font-medium text-emerald-600">
+              <p className="shrink-0 text-sm font-semibold text-emerald-600">
                 +{formatRupees(sale.amount_paisa)}
               </p>
             </li>
           ))}
         </ul>
       ) : (
-        <p className="mt-3 rounded-xl border border-dashed border-gray-300 p-6 text-center text-sm text-gray-500">
-          No cash-outs yet.
-        </p>
+        <p className="empty-state mt-4">No cash-outs yet.</p>
       )}
     </section>
   );

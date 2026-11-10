@@ -38,6 +38,7 @@ before running `bun run build`.
 src/
   features/app/    RTK Query base API, store, shared UI
   features/auth/   auth forms, guards, session handling
+  features/goals/  savings goal card, progress, goal API
   features/home/    home dashboard sections
   features/product/ Silver/Gold product selection
   features/vault/   balance, collect/sell forms, price chart, admin price card

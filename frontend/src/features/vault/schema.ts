@@ -23,15 +23,12 @@ export const collectSilverRupeesSchema = z.object({
 
 export type CollectSilverRupeesForm = z.infer<typeof collectSilverRupeesSchema>;
 
-// Cash-out is entered in grams as a string so the API keeps milligram
-// precision instead of passing through a float.
+// Cash-out is entered in whole grams because the vault stores integer grams.
 export const sellGramsSchema = z.object({
   grams: z
-    .string({ error: "Enter grams" })
-    .trim()
-    .min(1, "Enter grams")
-    .regex(/^\d+(\.\d{1,3})?$/, "Use up to 3 decimal places")
-    .refine((value) => Number(value) > 0, "Enter grams greater than zero"),
+    .number({ error: "Enter grams" })
+    .int("Use whole grams")
+    .min(1, "Enter at least 1 gram"),
 });
 
 export type SellGramsForm = z.infer<typeof sellGramsSchema>;

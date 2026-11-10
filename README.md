@@ -6,8 +6,8 @@ BIPOFAD is a digital metal vault: add money to your wallet, buy fractional
 silver or gold at the current rate, watch your collection grow, and redeem it
 for physical metal or its equivalent value.
 
-> Current status: authentication and the buy side are working. The wallet
-> funding, sell/redeem, and savings-goal flows are still being built.
+> Current status: authentication, the wallet, buy/sell, and savings goals are
+> working. Recurring buys and physical redemption are still being built.
 
 ## Tech stack
 
@@ -23,7 +23,9 @@ for physical metal or its equivalent value.
 backend/
   alembic/            database migrations
   src/auth/           register, login, refresh, admin bootstrap
+  src/goals/          savings goals and derived progress
   src/vault/          metal balances, collections, price history
+  src/wallet/         wallet ledger and admin credits
   config.py           environment settings
   database.py         async session + engine
   models.py           User, RefreshToken, Product, PriceHistory, VaultCollection,
@@ -32,8 +34,9 @@ backend/
 
 frontend/
   src/features/auth/    auth forms, guards, session
+  src/features/goals/   savings goal card, progress, goal API
   src/features/product/ Silver/Gold switcher state
-  src/features/vault/   vault cards, collect form, price chart, admin card
+  src/features/vault/   vault cards, collect/sell forms, price chart
   src/features/wallet/  wallet ledger history
   src/pages/            home, auth, vault pages
   src/features/app/     RTK Query base API, store, shared UI
@@ -202,23 +205,33 @@ You can also put `ADMIN_EMAIL`, `ADMIN_USERNAME`, and `ADMIN_PASSWORD` in
 | `GET` | `/vault?product=SILVER` (or `GOLD`) | Bearer | Wallet, metal balance, collections, cash-outs |
 | `POST` | `/vault/collect` | Bearer | Buy silver or gold with wallet balance |
 | `POST` | `/vault/sell` | Bearer | Cash out metal into the wallet |
+| `GET` | `/goals` | Bearer | Savings goals with live progress |
+| `GET` | `/goals/{id}` | Bearer | One savings goal |
+| `POST` | `/goals` | Bearer | Create a goal for a metal |
+| `PATCH` | `/goals/{id}` | Bearer | Change a goal's target weight |
+| `DELETE` | `/goals/{id}` | Bearer | Delete a goal |
 | `GET` | `/vault/prices?product=SILVER` (or `GOLD`) | Public | Recent metal price history |
 | `POST` | `/vault/prices` | Superuser | Record a new metal price |
 | `GET` | `/wallet/transactions` | Bearer | Wallet ledger history |
 | `POST` | `/wallet/credit` | Superuser | Credit a user's wallet (testing/support) |
 
-Money-moving `POST` endpoints (`/vault/collect`, `/wallet/credit`) require a
-client-generated `idempotency_key`. Retrying with the same key and amount
-returns the original result instead of moving money twice.
+Money-moving `POST` endpoints (`/vault/collect`, `/vault/sell`,
+`/wallet/credit`) require a client-generated `idempotency_key`. Retrying with
+the same key and amount returns the original result instead of moving money
+twice.
 
-Money is stored as integer **paisa**; metal balances are stored as
-`Numeric(14, 3)` and returned as decimal strings (for example `"1.234"`).
+Money is stored as integer **paisa**; metal balances are stored as whole
+**grams** (integer). Because grams are whole units, a purchase is charged only
+for the grams it actually buys; any remainder stays in the wallet.
 `POST /vault/collect`, `POST /vault/sell`, and `POST /vault/prices` accept a
 `product` field (`SILVER` or `GOLD`; default `SILVER`).
 
+Savings goals target a whole-gram weight. Progress is derived from the current
+metal balance, so it updates automatically after a purchase.
+
 Cash-out currently credits the user's wallet rather than paying to a bank.
 Each product has a minimum cash-out weight (`products.min_cashout_grams`):
-Silver starts at **1 g** and Gold at **0.1 g** in development.
+both Silver and Gold start at **1 g** in development.
 
 ## Build roadmap
 
@@ -232,9 +245,10 @@ See [`plan.md`](plan.md) for the full step-by-step learning roadmap.
 - [x] Admin bootstrap CLI
 - [x] Wallet funding and transaction ledger
 - [x] Sell / cash-out into wallet (minimum weight per metal)
-- [ ] Savings goals
+- [x] Savings goals with derived progress
 - [ ] Recurring buys
 - [ ] Physical redemption workflow
 - [ ] Admin operations dashboard
+- [ ] Receipts and notifications
 - [ ] Payments and KYC integration
 - [ ] Tests, CI, and deployment

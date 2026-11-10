@@ -1,26 +1,7 @@
-import { useEffect } from "react";
-import { useAppDispatch } from "@/features/app/store";
-import { authApi } from "./authApi";
-import { clearUser, setUser } from "./authSlice";
-import { clearTokens, loadToken } from "./storage";
+import { useSessionValidator } from "./hooks/useSessionValidator";
 
-/** Revalidates the stored token against the API before the guard trusts it. */
+/** Keeps the Redux session in sync with the stored token. Renders nothing. */
 export function SessionValidator() {
-  const dispatch = useAppDispatch();
-  const { data, isError } = authApi.useMeQuery(undefined, {
-    skip: !loadToken(),
-  });
-
-  useEffect(() => {
-    if (!data?.user) return;
-    dispatch(setUser(data.user));
-  }, [data, dispatch]);
-
-  useEffect(() => {
-    if (!isError) return;
-    clearTokens();
-    dispatch(clearUser());
-  }, [isError, dispatch]);
-
+  useSessionValidator();
   return null;
 }

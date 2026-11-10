@@ -6,22 +6,29 @@ export function TextField({
   placeholder,
   registration,
   error,
+  autoComplete,
 }: {
   type?: "text" | "email" | "password";
   label?: string;
   placeholder?: string;
   registration: UseFormRegisterReturn;
   error?: FieldError;
+  autoComplete?: string;
 }) {
   return (
     <div className="flex flex-col gap-1.5">
       {label && (
-        <label className="text-sm font-medium text-gray-700">{label}</label>
+        <label htmlFor={registration.name} className="label">
+          {label}
+        </label>
       )}
       <input
+        id={registration.name}
         type={type}
         placeholder={placeholder}
-        className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-base text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10 sm:text-sm"
+        autoComplete={autoComplete}
+        className="input"
+        aria-invalid={error ? true : undefined}
         {...registration}
       />
       {error && <p className="text-xs text-red-600">{error.message}</p>}

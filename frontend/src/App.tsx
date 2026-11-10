@@ -6,7 +6,7 @@ import { Guard } from "./features/auth/guards";
 import { AuthPage } from "./pages/authPage";
 import { HomePage } from "./pages/homePage";
 import { VaultPage } from "./pages/vaultPage";
-
+import {ProgressPage} from "./pages/progressPage";
 export function App() {
   return (
     <BrowserRouter>
@@ -43,7 +43,14 @@ export function App() {
             </AuthPage>
           }
         />
-        <Route path="*" element={<Navigate to="/" replace />} />
+<Route
+          path="/progress"
+          element={
+            <Guard>
+              <ProgressPage />
+            </Guard>
+          }
+        />        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
   );

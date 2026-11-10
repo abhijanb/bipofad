@@ -1,87 +1,55 @@
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { Link, useNavigate } from "react-router-dom";
-import { toast } from "sonner";
-import { useLoginMutation } from "../authApi";
-import { loginSchema, type LoginForm } from "../schema";
-import { saveRefreshToken, saveToken } from "../storage";
-import { useAppDispatch } from "@/features/app/store";
-import { baseApi } from "@/features/app/baseApi";
-import { setUser } from "../authSlice";
+import { Link } from "react-router-dom";
 import { TextField } from "@/features/app/components/textField";
-import { getApiErrorMessage } from "@/features/app/apiError";
+import { useLoginForm } from "../hooks/useLoginForm";
 
 export function LoginForm() {
-  const navigate = useNavigate();
-  const dispatch = useAppDispatch();
-  const [login] = useLoginMutation();
-  const {
-    register,
-    handleSubmit,
-    reset,
-    formState: { errors, isSubmitting },
-  } = useForm<LoginForm>({
-    resolver: zodResolver(loginSchema),
-  });
-
-  async function onSubmit(values: LoginForm) {
-    try {
-      const data = await login(values).unwrap();
-      if (!data.user) {
-        toast.error("Login failed: no user returned");
-        return;
-      }
-      saveToken(data.access_token);
-      saveRefreshToken(data.refresh_token);
-      // Clear anything cached from a previous account before switching over.
-      dispatch(baseApi.util.resetApiState());
-      dispatch(setUser(data.user));
-      toast.success(data.message);
-      reset();
-      navigate("/", { replace: true });
-    } catch (error) {
-      toast.error(getApiErrorMessage(error, "Login failed"));
-    }
-  }
+  const { register, handleSubmit, errors, isSubmitting } = useLoginForm();
 
   return (
     <form
-      onSubmit={handleSubmit(onSubmit)}
-      className="flex w-full max-w-sm flex-col gap-4 rounded-xl border border-gray-200 bg-white p-6 shadow-sm"
+      onSubmit={handleSubmit}
+      className="card w-full p-6 sm:p-8"
     >
-      <div className="flex flex-col gap-1">
-        <h1 className="text-xl font-semibold text-gray-900">Login</h1>
-        <p className="text-sm text-gray-500">Sign in to your account</p>
+      <p className="eyebrow">Welcome back</p>
+      <h1 className="mt-2 text-3xl font-semibold tracking-tight text-ink-950">
+        Sign in to HBC
+      </h1>
+      <p className="mt-2 text-sm text-silver-500">
+        Pick up where you left off and keep building your vault.
+      </p>
+
+      <div className="mt-6 flex flex-col gap-4">
+        <TextField
+          type="email"
+          label="Email"
+          placeholder="you@example.com"
+          autoComplete="email"
+          registration={register("email")}
+          error={errors.email}
+        />
+
+        <TextField
+          type="password"
+          label="Password"
+          placeholder="Enter your password"
+          autoComplete="current-password"
+          registration={register("password")}
+          error={errors.password}
+        />
+
+        <button
+          type="submit"
+          disabled={isSubmitting}
+          className="btn btn-gold mt-1 w-full"
+        >
+          {isSubmitting ? "Signing in..." : "Login"}
+        </button>
       </div>
 
-      <TextField
-        type="email"
-        label="Email"
-        placeholder="you@example.com"
-        registration={register("email")}
-        error={errors.email}
-      />
-
-      <TextField
-        type="password"
-        label="Password"
-        placeholder="Enter your password"
-        registration={register("password")}
-        error={errors.password}
-      />
-
-      <button
-        type="submit"
-        disabled={isSubmitting}
-        className="w-full rounded-lg bg-gray-900 px-3 py-2.5 text-sm font-medium text-white transition hover:bg-black disabled:opacity-50"
-      >
-        {isSubmitting ? "Signing in..." : "Login"}
-      </button>
-
-      <p className="text-center text-sm text-gray-500">
+      <p className="mt-6 text-center text-sm text-silver-500">
         No account?{" "}
-        <Link to="/register" className="font-medium text-gray-900 underline">
-          Register
+        <Link to="/register" className="font-semibold text-ink-950 underline decoration-gold-400 decoration-2 underline-offset-4">
+          Create one
         </Link>
       </p>
     </form>

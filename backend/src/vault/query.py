@@ -1,5 +1,3 @@
-from decimal import ROUND_DOWN, ROUND_HALF_UP, Decimal
-
 from fastapi import HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio.session import AsyncSession
@@ -9,8 +7,6 @@ from src.vault.schema import PricePoint, ProductCode
 from src.vault.schema import VaultCollection as VaultCollectionOut
 from src.vault.schema import VaultSale as VaultSaleOut
 from src.vault.schema import VaultSummary
-
-GRAMS_QUANTUM = Decimal("0.001")
 
 
 def product_label(product: ProductCode) -> str:
@@ -66,35 +62,25 @@ def price_to_schema(row: PriceHistory) -> PricePoint:
     )
 
 
-def grams_for_amount(amount_paisa: int, price_per_gram_paisa: int) -> Decimal:
-    """Convert paisa to grams, rounded down to the milligram."""
+def grams_for_amount(amount_paisa: int, price_per_gram_paisa: int) -> int:
+    """Convert paisa to whole grams, rounded down."""
     if price_per_gram_paisa <= 0:
         raise ValueError("price_per_gram_paisa must be positive")
-    return (Decimal(amount_paisa) / Decimal(price_per_gram_paisa)).quantize(
-        GRAMS_QUANTUM,
-        rounding=ROUND_DOWN,
-    )
+    return amount_paisa // price_per_gram_paisa
 
 
-def amount_for_grams(
-    grams: Decimal,
-    price_per_gram_paisa: int,
-) -> int:
-    """Convert grams to paisa, rounded down so the vault never overpays."""
+def amount_for_grams(grams: int, price_per_gram_paisa: int) -> int:
+    """Convert whole grams to paisa."""
     if price_per_gram_paisa <= 0:
         raise ValueError("price_per_gram_paisa must be positive")
-    return int(
-        (grams * Decimal(price_per_gram_paisa)).to_integral_value(
-            rounding=ROUND_DOWN
-        )
-    )
+    return grams * price_per_gram_paisa
 
 
 async def get_vault_balances(
     db: AsyncSession,
     user_id: int,
     product: ProductCode,
-) -> tuple[Decimal, int]:
+) -> tuple[int, int]:
     """Return (cached metal grams, wallet paisa) for a user."""
     result = await db.execute(
         select(grams_column_for(product), User.balance_paisa).where(
@@ -103,8 +89,8 @@ async def get_vault_balances(
     )
     row = result.one_or_none()
     if row is None:
-        return Decimal("0"), 0
-    return Decimal(row[0]), int(row[1])
+        return 0, 0
+    return int(row[0]), int(row[1])
 
 
 async def get_vault_collections(
@@ -181,13 +167,7 @@ async def get_vault_summary(
     collections = await get_vault_collections(db, user_id, product_row.id)
     sales = await get_vault_sales(db, user_id, product_row.id)
 
-    value_paisa = 0
-    if price is not None:
-        value_paisa = int(
-            (balance_grams * price).quantize(
-                Decimal("1"), rounding=ROUND_HALF_UP
-            )
-        )
+    value_paisa = balance_grams * price if price is not None else 0
 
     return VaultSummary(
         product=product,

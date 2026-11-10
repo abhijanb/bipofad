@@ -1,6 +1,5 @@
-import { useEffect, type ReactNode } from "react";
-import { useNavigate } from "react-router-dom";
-import { useAppSelector } from "@/features/app/store";
+import type { ReactNode } from "react";
+import { useGuard } from "./hooks/useGuard";
 
 export function Guard({
   admin = false,
@@ -9,22 +8,16 @@ export function Guard({
   admin?: boolean;
   children: ReactNode;
 }) {
-  const navigate = useNavigate();
-  const user = useAppSelector((state) => state.auth.user);
-  const status = useAppSelector((state) => state.auth.status);
-  const allowed =
-    status === "authenticated" && (admin ? user?.isSuperuser === true : true);
-
-  useEffect(() => {
-    if (status === "anonymous") navigate("/login", { replace: true });
-    else if (status === "authenticated" && !allowed) navigate("/", { replace: true });
-  }, [status, allowed, navigate]);
+  const { checking, allowed } = useGuard(admin);
 
   // A stored token is being checked with /auth/me; don't render or redirect yet.
-  if (status === "checking") {
+  if (checking) {
     return (
-      <div className="flex min-h-screen items-center justify-center px-6">
-        <p className="text-sm text-gray-500">Checking your session...</p>
+      <div className="flex min-h-screen items-center justify-center bg-cream-50 px-6">
+        <div className="flex flex-col items-center gap-3">
+          <span className="h-10 w-10 animate-spin rounded-full border-2 border-ink-900/10 border-t-gold-500" />
+          <p className="text-sm text-silver-500">Checking your session...</p>
+        </div>
       </div>
     );
   }

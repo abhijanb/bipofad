@@ -1,11 +1,10 @@
 from sqlalchemy import Boolean
 from datetime import datetime
-from decimal import Decimal
 from sqlalchemy import String
 from sqlalchemy.orm import mapped_column
 from sqlalchemy.orm import Mapped
 from database import Base
-from sqlalchemy import BigInteger, CheckConstraint, DateTime, ForeignKey, Index, Integer, Numeric, String, UniqueConstraint, func
+from sqlalchemy import BigInteger, CheckConstraint, DateTime, ForeignKey, Index, Integer, String, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from database import Base
 class User(Base):
@@ -21,11 +20,11 @@ class User(Base):
      balance_paisa: Mapped[int] = mapped_column(
          BigInteger, default=0, server_default="0", nullable=False
      )
-     silver_grams: Mapped[Decimal] = mapped_column(
-         Numeric(14, 3), default=Decimal("0"), server_default="0", nullable=False
+     silver_grams: Mapped[int] = mapped_column(
+         Integer, default=0, server_default="0", nullable=False
      )
-     gold_grams: Mapped[Decimal] = mapped_column(
-         Numeric(14, 3), default=Decimal("0"), server_default="0", nullable=False
+     gold_grams: Mapped[int] = mapped_column(
+         Integer, default=0, server_default="0", nullable=False
      )
      failed_login_attempts: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
      locked_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
@@ -72,9 +71,9 @@ class Product(Base):
     code: Mapped[str] = mapped_column(String(20), unique=True, nullable=False)  # "SILVER", "GOLD"
     name: Mapped[str] = mapped_column(String(100), nullable=False)
     unit: Mapped[str] = mapped_column(String(20), default="gram", nullable=False)
-    # Smallest holding a user may cash out for this metal, in grams.
-    min_cashout_grams: Mapped[Decimal] = mapped_column(
-        Numeric(14, 3), default=Decimal("0"), server_default="0", nullable=False
+    # Smallest holding a user may cash out for this metal, in whole grams.
+    min_cashout_grams: Mapped[int] = mapped_column(
+        Integer, default=0, server_default="0", nullable=False
     )
     description: Mapped[str | None] = mapped_column(String(255))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
@@ -117,8 +116,8 @@ class VaultCollection(Base):
     )
     product_id: Mapped[int] = mapped_column(ForeignKey("products.id"), nullable=False)
     amount_paisa: Mapped[int] = mapped_column(BigInteger, nullable=False)
-    # Three decimal places: the smallest unit the app exposes is 1 mg.
-    grams: Mapped[Decimal] = mapped_column(Numeric(14, 3), nullable=False)
+    # Whole grams: the app buys and sells in gram units only.
+    grams: Mapped[int] = mapped_column(Integer, nullable=False)
     price_per_gram_paisa: Mapped[int] = mapped_column(BigInteger, nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
@@ -151,7 +150,7 @@ class VaultSale(Base):
         ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
     )
     product_id: Mapped[int] = mapped_column(ForeignKey("products.id"), nullable=False)
-    grams: Mapped[Decimal] = mapped_column(Numeric(14, 3), nullable=False)
+    grams: Mapped[int] = mapped_column(Integer, nullable=False)
     amount_paisa: Mapped[int] = mapped_column(BigInteger, nullable=False)
     price_per_gram_paisa: Mapped[int] = mapped_column(BigInteger, nullable=False)
     created_at: Mapped[datetime] = mapped_column(
@@ -167,6 +166,49 @@ class VaultSale(Base):
         CheckConstraint(
             "price_per_gram_paisa > 0",
             name="ck_vault_sales_price_positive",
+        ),
+    )
+
+
+class SavingsGoal(Base):
+    """A user's target weight for one metal.
+
+    Progress is not stored here: it is derived from the cached metal balance on
+    `users`, so a purchase moves the goal automatically.
+    """
+
+    __tablename__ = "savings_goals"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    product_id: Mapped[int] = mapped_column(ForeignKey("products.id"), nullable=False)
+    target_grams: Mapped[int] = mapped_column(Integer, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+        nullable=False,
+    )
+
+    user: Mapped["User"] = relationship()
+    product: Mapped["Product"] = relationship()
+
+    __table_args__ = (
+        # One active goal per user per metal keeps the "keep buying until..."
+        # experience unambiguous.
+        UniqueConstraint(
+            "user_id",
+            "product_id",
+            name="uix_savings_goals_user_product",
+        ),
+        CheckConstraint(
+            "target_grams > 0",
+            name="ck_savings_goals_target_grams_positive",
         ),
     )
 

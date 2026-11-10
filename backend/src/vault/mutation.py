@@ -1,5 +1,3 @@
-from decimal import Decimal
-
 from fastapi import HTTPException, status
 from sqlalchemy import select, update
 from sqlalchemy.exc import IntegrityError
@@ -44,10 +42,7 @@ async def _replay_purchase(
     data: CollectRequest,
 ) -> CollectResponse:
     """Return the original purchase for a retried request."""
-    if (
-        existing.type != _purchase_type(data.product)
-        or existing.amount_paisa != -data.amount_paisa
-    ):
+    if existing.type != _purchase_type(data.product) or existing.amount_paisa >= 0:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="Idempotency key was already used for a different request",
@@ -75,6 +70,23 @@ async def _replay_purchase(
             detail="Idempotency key has no matching collection",
         )
 
+    # The purchase may have charged less than requested because grams are
+    # whole units. Validate the request against the price stored on the
+    # original collection.
+    expected_grams = grams_for_amount(
+        data.amount_paisa, collection.price_per_gram_paisa
+    )
+    expected_amount = expected_grams * collection.price_per_gram_paisa
+    if (
+        expected_grams <= 0
+        or collection.grams != expected_grams
+        or collection.amount_paisa != expected_amount
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Idempotency key was already used for a different request",
+        )
+
     balances = await db.execute(
         select(grams_column_for(data.product), User.balance_paisa).where(
             User.id == user_id
@@ -85,7 +97,7 @@ async def _replay_purchase(
     return CollectResponse(
         message=f"{product_label(data.product)} already collected",
         collection=collection_to_schema(collection),
-        balance_grams=Decimal(row[0]),
+        balance_grams=int(row[0]),
         balance_paisa=int(row[1]),
     )
 
@@ -141,7 +153,7 @@ async def _replay_sale(
     return SellResponse(
         message=f"{product_label(data.product)} already cashed out",
         sale=sale_to_schema(sale),
-        balance_grams=Decimal(row[0]),
+        balance_grams=int(row[0]),
         balance_paisa=int(row[1]),
     )
 
@@ -179,17 +191,24 @@ async def collect_metal(
     if grams <= 0:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Amount is too small for the current {label.lower()} price",
+            detail=(
+                f"Amount is too small for the current {label.lower()} price. "
+                f"At least {price_per_gram_paisa} paisa is needed for 1 g."
+            ),
         )
+
+    # Whole grams rarely divide the requested amount exactly. Charge only what
+    # the grams actually cost and leave the remainder in the wallet.
+    amount_paisa = grams * price_per_gram_paisa
 
     # Debit the wallet and credit the metal in one atomic statement. If the
     # balance is too low no row is returned and nothing is written.
     grams_column = grams_column_for(data.product)
     balances = await db.execute(
         update(User)
-        .where(User.id == user_id, User.balance_paisa >= data.amount_paisa)
+        .where(User.id == user_id, User.balance_paisa >= amount_paisa)
         .values(
-            balance_paisa=User.balance_paisa - data.amount_paisa,
+            balance_paisa=User.balance_paisa - amount_paisa,
             **{grams_column.key: grams_column + grams},
         )
         .returning(User.balance_paisa, grams_column)
@@ -202,12 +221,12 @@ async def collect_metal(
         )
 
     new_balance = int(row[0])
-    new_grams = Decimal(row[1])
+    new_grams = int(row[1])
 
     collection = VaultCollection(
         user_id=user_id,
         product_id=product.id,
-        amount_paisa=data.amount_paisa,
+        amount_paisa=amount_paisa,
         grams=grams,
         price_per_gram_paisa=price_per_gram_paisa,
     )
@@ -220,7 +239,7 @@ async def collect_metal(
             db,
             user_id=user_id,
             type=_purchase_type(data.product),
-            amount_paisa=-data.amount_paisa,
+            amount_paisa=-amount_paisa,
             balance_after_paisa=new_balance,
             reference_type="vault_collection",
             reference_id=collection.id,
@@ -321,7 +340,7 @@ async def sell_metal(
             detail=f"Not enough {label.lower()} to cash out",
         )
 
-    new_grams = Decimal(row[0])
+    new_grams = int(row[0])
     new_balance = int(row[1])
 
     sale = VaultSale(

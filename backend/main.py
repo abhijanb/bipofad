@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from config import settings
 from database import engine
 from src.auth.router import auth_router
+from src.goals.router import goals_router
 from src.vault.router import vault_router
 from src.wallet.router import wallet_router
 
@@ -34,6 +35,7 @@ def read_root():
 
 
 app.include_router(auth_router, tags=["auth"])
+app.include_router(goals_router, tags=["goals"])
 app.include_router(vault_router, tags=["vault"])
 app.include_router(wallet_router, tags=["wallet"])
 

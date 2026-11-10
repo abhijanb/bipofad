@@ -3,16 +3,14 @@ export type VaultProduct = "SILVER" | "GOLD";
 export type VaultCollection = {
   id: number;
   amount_paisa: number;
-  /** Decimal string from the API, e.g. "1.234". */
-  grams: string;
+  grams: number;
   price_per_gram_paisa: number;
   collected_at: string;
 };
 
 export type VaultSale = {
   id: number;
-  /** Decimal string from the API, e.g. "1.234". */
-  grams: string;
+  grams: number;
   amount_paisa: number;
   price_per_gram_paisa: number;
   sold_at: string;
@@ -21,13 +19,12 @@ export type VaultSale = {
 export type VaultSummary = {
   product: VaultProduct;
   balance_paisa: number;
-  /** Decimal string from the API, e.g. "1.234". */
-  balance_grams: string;
+  balance_grams: number;
   price_per_gram_paisa: number | null;
   price_updated_at: string | null;
   value_paisa: number;
-  /** Smallest holding the user may cash out, as a decimal string. */
-  min_cashout_grams: string;
+  /** Smallest holding the user may cash out, in whole grams. */
+  min_cashout_grams: number;
   currency: string;
   collections: VaultCollection[];
   sales: VaultSale[];
@@ -54,22 +51,19 @@ export type CollectMetalInput = {
 export type CollectMetalResponse = {
   message: string;
   collection: VaultCollection;
-  /** Decimal string from the API, e.g. "1.234". */
-  balance_grams: string;
+  balance_grams: number;
   balance_paisa: number;
 };
 
 export type SellMetalInput = {
   product: VaultProduct;
-  /** Decimal string so milligram precision survives the request. */
-  grams: string;
+  grams: number;
   idempotency_key: string;
 };
 
 export type SellMetalResponse = {
   message: string;
   sale: VaultSale;
-  /** Decimal string from the API, e.g. "1.234". */
-  balance_grams: string;
+  balance_grams: number;
   balance_paisa: number;
 };

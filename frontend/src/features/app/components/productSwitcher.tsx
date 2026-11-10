@@ -1,35 +1,45 @@
-import { useAppDispatch, useAppSelector } from "@/features/app/store";
-import {
-  PRODUCTS,
-  productLabel,
-} from "@/features/product/product";
-import {
-  selectProduct,
-  setProduct,
-} from "@/features/product/productSlice";
-import type { VaultProduct } from "@/features/vault/types";
+import { useProductSwitcher } from "@/features/product/hooks/useProductSwitcher";
 
 export function ProductSwitcher() {
-  const dispatch = useAppDispatch();
-  const selected = useAppSelector(selectProduct);
+  const { product, setProduct, options } = useProductSwitcher();
 
   return (
-    <label className="inline-flex items-center gap-2">
-      <span className="sr-only">Choose metal</span>
-      <select
-        value={selected}
-        onChange={(event) =>
-          dispatch(setProduct(event.target.value as VaultProduct))
-        }
-        className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-900 outline-none transition hover:bg-gray-50 focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10"
-        aria-label="Choose metal"
-      >
-        {PRODUCTS.map((product) => (
-          <option key={product} value={product}>
-            {productLabel(product)}
-          </option>
-        ))}
-      </select>
-    </label>
+    <div
+      className="flex rounded-full border border-ink-900/10 bg-white/70 p-0.5 shadow-sm"
+      role="group"
+      aria-label="Choose metal"
+    >
+      {options.map((option) => {
+        const active = option.value === product;
+        const tooltipId = `product-price-${option.value.toLowerCase()}`;
+        return (
+          <button
+            key={option.value}
+            type="button"
+            onClick={() => setProduct(option.value)}
+            aria-pressed={active}
+            aria-describedby={option.price ? tooltipId : undefined}
+            className={`group relative rounded-full px-2 py-1.5 text-[0.7rem] font-semibold transition sm:px-3 sm:text-sm ${
+              active
+                ? option.value === "GOLD"
+                  ? "bg-gradient-to-br from-gold-300 to-gold-500 text-ink-950 shadow-sm"
+                  : "bg-ink-950 text-white shadow-sm"
+                : "text-ink-600 hover:text-ink-950"
+            }`}
+          >
+            {option.label}
+            {option.price && (
+              <span
+                id={tooltipId}
+                role="tooltip"
+                className="pointer-events-none absolute left-1/2 top-full z-50 mt-2 -translate-x-1/2 whitespace-nowrap rounded-lg border border-white/10 bg-ink-950 px-2.5 py-1 text-[0.65rem] font-medium text-cream-50 opacity-0 shadow-lg transition group-hover:opacity-100 group-focus-visible:opacity-100"
+              >
+                {option.price}
+              </span>
+            )}
+          </button>
+        );
+      })}
+    </div>
   );
 }

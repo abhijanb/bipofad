@@ -1,8 +1,7 @@
 from datetime import datetime
-from decimal import Decimal
 from typing import Literal
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field
 
 # Money is kept as integer paisa, matching models.PriceHistory.price, so the
 # API never has to round rupee amounts.
@@ -15,16 +14,14 @@ ProductCode = Literal["SILVER", "GOLD"]
 class VaultCollection(BaseModel):
     id: int
     amount_paisa: int
-    # Serialized as a decimal string (e.g. "1.234") so clients never lose
-    # milligram precision to binary floating point.
-    grams: Decimal
+    grams: int
     price_per_gram_paisa: int
     collected_at: datetime
 
 
 class VaultSale(BaseModel):
     id: int
-    grams: Decimal
+    grams: int
     amount_paisa: int
     price_per_gram_paisa: int
     sold_at: datetime
@@ -33,11 +30,11 @@ class VaultSale(BaseModel):
 class VaultSummary(BaseModel):
     product: ProductCode = "SILVER"
     balance_paisa: int = 0
-    balance_grams: Decimal = Decimal("0")
+    balance_grams: int = 0
     price_per_gram_paisa: int | None = None
     price_updated_at: datetime | None = None
     value_paisa: int = 0
-    min_cashout_grams: Decimal = Decimal("0")
+    min_cashout_grams: int = 0
     currency: str = "NPR"
     collections: list[VaultCollection] = Field(default_factory=list)
     sales: list[VaultSale] = Field(default_factory=list)
@@ -78,18 +75,16 @@ class CollectRequest(BaseModel):
 class CollectResponse(BaseModel):
     message: str
     collection: VaultCollection
-    balance_grams: Decimal
+    balance_grams: int
     balance_paisa: int
 
 
 class SellRequest(BaseModel):
     product: ProductCode = "SILVER"
-    grams: Decimal = Field(
+    grams: int = Field(
         ...,
         gt=0,
-        max_digits=14,
-        decimal_places=3,
-        description="Amount of metal to cash out, in grams.",
+        description="Whole grams of metal to cash out.",
     )
     idempotency_key: str = Field(
         ...,
@@ -98,16 +93,9 @@ class SellRequest(BaseModel):
         description="Client-generated key that makes retries safe.",
     )
 
-    @field_validator("grams")
-    @classmethod
-    def validate_grams_precision(cls, value: Decimal) -> Decimal:
-        if value != value.quantize(Decimal("0.001")):
-            raise ValueError("Use at most three decimal places")
-        return value
-
 
 class SellResponse(BaseModel):
     message: str
     sale: VaultSale
-    balance_grams: Decimal
+    balance_grams: int
     balance_paisa: int
